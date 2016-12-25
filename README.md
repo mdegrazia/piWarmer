@@ -1,5 +1,5 @@
 # piWarmer
-This is a Python scipt that controls an AC/DC relay attached to a Raspberry Pi with a space heater plugged in. There is an adafruit GMS Board that receives text messages using a Ting SIM card connected to the Raspberry Pi. When the Pi receives a text messgae it will turn the AC/DC relay on or off accordingly, thus powering the heater on or off. The following are a list of commands that can be sent to the Pi that will control the heater:
+This is a Python scipt that controls an AC/DC relay attached to a Raspberry Pi with a space heater plugged in. There is an adafruit GSM Board that receives text messages using a Ting SIM card connected to the Raspberry Pi. When the Pi receives a text messgae it will turn the AC/DC relay on or off accordingly, thus powering the heater on or off. The following are a list of commands that can be sent to the Pi that will control the heater:
 
 SMS Message | Action
 ------------ | -------------
