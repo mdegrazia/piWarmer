@@ -68,8 +68,8 @@ def sendMessage(message_num,text):
 	time.sleep(5)
 	
 
-#reads all the text messages on the SIM card and returns a list of messages with three fields: id, num, message
-def getMessages():
+#reads text messages on the SIM card and returns a list of messages with three fields: id, num, message
+def getMessages(confirmation=True):
         #put into SMS mode
         sendCommand("AT+CMGF=1")
         #get all text messages currently on SIM Card
@@ -95,10 +95,13 @@ def getMessages():
                         sendCommand("AT+CMGD="+str(message_id))
                         time.sleep(4)
         
-        for message in messages:
-                logger.info("Message received from " + message[1] + ": " + message[2])
-                sendCommand('AT+CMGS='+message[1])
-                sendCommand("Message received: " + message[2] + chr(26))
+        if len(messages) > 0:
+            for message in messages:
+                if confirmation == True:
+                    logger.info("Message received from " + message[1] + ": " + message[2])
+                    sendCommand('AT+CMGS='+message[1])
+                    sendCommand("Message received: " + message[2] + chr(26))
+
         return messages
 
 def heaterON():
@@ -129,17 +132,6 @@ def heaterTimer(queue):
          logger.info("Heater turned OFF. Max Time Reached")
          return
 
-#capture stdout and sterr in the log
-class MyLogger(object):
-        def __init__(self, logger, level):
-                """Needs a logger and a logger level."""
-                self.logger = logger
-                self.level = level
-
-        def write(self, message):
-                # Only log if there is a message (not just a new line)
-                if message.rstrip() != "":
-                        self.logger.log(self.level, message.rstrip())
 
 if __name__ == '__main__':
 	#set up logging
@@ -150,10 +142,6 @@ if __name__ == '__main__':
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
 
-	#Replace stdout with logging to file at INFO level
-	#sys.stdout = MyLogger(logger, logging.INFO)
-	# Replace stderr with logging to file at ERROR level
-	#sys.stderr = MyLogger(logger, logging.ERROR)
 
 	#create queue to hold heater timer.
 	queue = MPQueue()
@@ -169,11 +157,30 @@ if __name__ == '__main__':
 	logger.info("Starting SMS monitoring and heater service")
 	logger.info("Initialize heater to OFF position")
 	GPIO.output(GPIO_PIN,GPIO.LOW)
+	for phone_number in ALLOWED_NUMBERS:
+		sendMessage('"+'+ phone_number +'"',"piWarmer powered on. Initializing. Wait to send messages...")
+		logger.info("Sent starting message to " + phone_number)
+	
+	#clear out all the text messages currently stored on the SIM card.We don't want old messages being processed
+	#dont send out a confirmation to these numbers because we are just deleting them and not processing them
+	
+	old_messages = True
+	while old_messages is True:
+		messages = getMessages(confirmation=False)
+		if messages:
+			for phone_number in ALLOWED_NUMBERS:
+				sendMessage('"+'+ phone_number +'"',"Old or unprocessed message(s) found on SIM Card. Deleting...: ")
+			for message in messages:
+				logger.info("Old message cleared from SIM Card: " + message[2])
+			
+		else:
+			old_messages = False
+
 	print "Starting to monitor for SMS Messages..."
 	logger.info("Begin monitoring for SMS messages")
 	
 	for phone_number in ALLOWED_NUMBERS:
-		sendMessage('"+'+ phone_number +'"',"piWarmer monitoring started")
+		sendMessage('"+'+ phone_number +'"',"piWarmer monitoring started. Ok to send messages now")
 		logger.info("Sent starting message to " + phone_number)
 	
 	print 'Press Ctrl-C to quit.'
