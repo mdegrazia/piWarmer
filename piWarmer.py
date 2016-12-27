@@ -169,7 +169,7 @@ if __name__ == '__main__':
 		messages = getMessages(confirmation=False)
 		if messages:
 			for phone_number in ALLOWED_NUMBERS:
-				sendMessage('"+'+ phone_number +'"',"Old or unprocessed message(s) found on SIM Card. Deleting...: ")
+				sendMessage('"+'+ phone_number +'"',"Old or unprocessed message(s) found on SIM Card. Deleting...")
 			for message in messages:
 				logger.info("Old message cleared from SIM Card: " + message[2])
 			
