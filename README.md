@@ -10,3 +10,5 @@ SHUTDOWN | Shutdown the Pi
 
 
 There is a configuration file, piWarmer.config that must be edited that contains phone numbers that are allowed to control the heater and a maximum time that the heater can run for if a "off" text messages is not received. Text messages can be upper or lowercase.
+
+Use the piWarmer image (https://github.com/mdegrazia/piWarmer/releases)  for easy installation. See the Wiki (https://github.com/mdegrazia/piWarmer/wiki) for parts needed, assembly instructions and software installation instructions.
