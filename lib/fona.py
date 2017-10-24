@@ -2,15 +2,15 @@ import serial
 import time
 
 class fona(object):
-	"""Class that controls an AC/DC control relay
-SERIAL_PORT, BAUDRATE, timeout=.1, rtscts=0
+	"""Class that send messages with an Adafruit Fona
+	SERIAL_PORT, BAUDRATE, timeout=.1, rtscts=0
 	Attributes:
-	name: Relay name (IE - Heater, Light, etc.
-	GPIO_PIN: BCM GPIO PIN on rasperry pi that the AC/D control relay is plugged into
+	unauthorize numbers
 	"""
-	def __init__(self,name,ser):
+	def __init__(self,name,ser,allowednumbers):
 		self.name = name
 		self.ser=ser
+		self.allowednumbers=allowednumbers
 
 	
 	#send a command to the modem
@@ -61,23 +61,19 @@ SERIAL_PORT, BAUDRATE, timeout=.1, rtscts=0
 							#now that we read the message,remove it from the SIM card
 							#self.sendCommand("AT+CMGD="+str(message_id))
 							time.sleep(1)
-			#now delete the messages since the have been read
+			#now delete the messages since they have been read
 			for message in messages:
 				self.sendCommand("AT+CMGD="+str(message[0]))
 				if confirmation is True:
-					self.sendMessage(message[1],"Message Received: " + message[2])
+					phone_number = message[1].replace('"','')
+					phone_number = phone_number.replace("+",'')
+					print phone_number
+					if phone_number in self.allowednumbers:
+						self.sendMessage(message[1],"Message Received: " + message[2])
 			return messages
 
 	def deleteMessages(self):
 		messages = self.getMessages(confirmation=False)
 		return len(messages)
 
-'''		
-ser=serial.Serial("/dev/ttyUSB0", 9600, timeout=.1, rtscts=0)
-
-#messages = fona.getMessages(confirmation=True)
-print "deleting messages"
-num = fona.deleteMessages()
-print "messages deleted: " + str(num)
-'''
 
