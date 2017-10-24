@@ -42,6 +42,7 @@ MAX_TIME = MAX_TIME * 60 #convert from minutes to seconds for sleep
 LOG_FILENAME = parser.get('SETTINGS','LOGFILE')
 LOG_LEVEL = logging.INFO
 
+
 def MQ2Status():
 	input_state = GPIO.input(MQ2_GPIO_PIN)
 	if input_state == 1:
@@ -61,11 +62,11 @@ def process_message(message,phone_number=False):
 		phone_number = phone_number.replace("+",'')
 		if phone_number not in ALLOWED_NUMBERS:
 			logger.warning("Received unauthorized SMS from " + phone_number)
-			response = "This phone number is not on the allowed list. Contact the administrator to have the phone number " + phone_number + " added"
+			response = "Received unauthorized SMS from " + phone_number
 			return response
 	if "on" in message:
 		print "Received ON request"
-		logger.info("Received ON request")
+		logger.info("Received ON request from " + phone_number)
 		if status == "1":
 			response = "Heater is already ON"
 			turn_on = False
@@ -87,7 +88,7 @@ def process_message(message,phone_number=False):
 				response = "Issue turning on Heater"
 	elif "off" in message:
 		print "Turn OFF heater"
-		logger.info("Received OFF request")
+		logger.info("Received OFF request from " + phone_number)
 		if status == "1":
 			try:
 				heater.switchLow()
@@ -100,7 +101,7 @@ def process_message(message,phone_number=False):
 		else:
 			response = "Heater is already OFF"
 	elif "status" in message:
-		logger.info("Received STATUS request")
+		logger.info("Received STATUS request from " + phone_number)
 		if status == "1":
 			print "Heater is ON"
 			response = "Heater is ON"
@@ -108,9 +109,9 @@ def process_message(message,phone_number=False):
 			print "Heater is OFF"
 			response = "Heater is OFF"
 	elif "shutdown" in message:
-		logger.info("Received SHUTDOWN request")
+		logger.info("Received SHUTDOWN request from " + phone_number)
 		response = "Shutting system down now"
-		logger.info("Shutting down Raspberry Pi")
+		logger.info("Shutting down Raspberry Pi request from " + phone_number)
 		try:
 			print "Shutting down Raspberry Pi"
 			shutdown()
@@ -118,11 +119,13 @@ def process_message(message,phone_number=False):
 			logger.warning("Issue shutting down Raspberry Pi")
 			response = "Issue shutting down Raspberry Pi"
 	else:
-		logger.info("Received something other than On,Off,Status,Shutdown request")
+		logger.info("Received something other than On,Off,Status,Shutdown request from " + phone_number)
 		print "Please text ON,OFF,STATUS or SHUTDOWN to control heater"
 		response = "Please text ON,OFF,STATUS or SHUTDOWN to control heater"
 	if phone_number:
 		fona.sendMessage('"+'+ phone_number +'"',response)
+		logger.info("Sent message: " + response + " to " + phone_number)
+		return response
 	else:
 		client.publish(FEED_STATUS,response)
 
@@ -204,7 +207,8 @@ if __name__ == '__main__':
 			logger.warning("Serial Device not connected")
 			exit()
 
-	fona = fona(name="fona",ser=ser)
+	
+	fona = fona(name="fona",ser=ser,allowednumbers=ALLOWED_NUMBERS)
 
 	#create queue to hold heater timer.
 	queue = MPQueue()
@@ -222,6 +226,7 @@ if __name__ == '__main__':
 		#start sub process to monitor actual MQ2 sensor
 		p_gas_monitor = Process(target=monitor_LED_sensor,args=(myLEDq,queue))
 		p_gas_monitor.start()
+		
 	else:
 		print "MQ2 Sensor not enabled"
 		logger.info("MQ2 Sensor not enabled")
@@ -241,11 +246,20 @@ if __name__ == '__main__':
 			fona.sendMessage('"+'+ phone_number +'"',"Old or unprocessed message(s) found on SIM Card. Deleting...")
 		logger.info(str(num_deleted) + " old message cleared from SIM Card")
 
+	if MQ2:
+		gas_status = MQ2Status()
+		if "off" in gas_status:
+			gas_status = "No gas detected"
+		if "on" in gas_status:
+			gas_status = "Gas detected"
+		for phone_number in ALLOWED_NUMBERS:
+			fona.sendMessage('"+'+ phone_number +'"',"MQ2 Gas Sensor Enabled. Status is " + gas_status)
+	
 	print "Starting to monitor for SMS Messages..."
 	logger.info("Begin monitoring for SMS messages")
 
 	for phone_number in ALLOWED_NUMBERS:
-		fona.sendMessage('"+'+ phone_number +'"',"piWarmer monitoring started. Ok to send messages now")
+		fona.sendMessage('"+'+ phone_number +'"',"piWarmer monitoring started. Ok to send messages now. Text ON,OFF,STATUS or SHUTDOWN to control heater")
 		logger.info("Sent starting message to " + phone_number)
 
 	print 'Press Ctrl-C to quit.'
